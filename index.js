@@ -6,11 +6,25 @@ const jwt = require('jsonwebtoken');
 const StepUserModel = require("./Models/Register/StepRegister")
 const NgoUserModel = require("./Models/Register/NgoRegister")
 const AdminUserModel = require("./Models/Register/AdminRegister")
+const FeedbackModel = require("./Models/Feedback")
 require("./Conn/conn")
 
 const app = express();
 app.use(express.json())
 app.use(cors());
+
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (token == null) return res.sendStatus(401); // No token provided
+  
+    jwt.verify(token, 'your_jwt_secret_key', (err, user) => {
+      if (err) return res.sendStatus(403); // Token is not valid
+      req.user = user;
+      next();
+    });
+  };
 
 
 app.post("/stepregister", async (req, res) => {
@@ -34,18 +48,6 @@ app.post("/stepregister", async (req, res) => {
     }
 });
 
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    
-    if (token == null) return res.sendStatus(401); // No token provided
-  
-    jwt.verify(token, 'your_jwt_secret_key', (err, user) => {
-      if (err) return res.sendStatus(403); // Token is not valid
-      req.user = user;
-      next();
-    });
-  };
 
 app.post("/stepuserlogin", async (req, res) => {
     try {
@@ -153,6 +155,23 @@ app.post("/adminlogin", async (req, res) => {
         const accessToken = jwt.sign({ _id: user._id, email: user.email }, 'your_jwt_secret_key');
         res.json({ accessToken, message: "Login successful" });
 
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+app.post("/feedback", async (req, res) => {
+    try {
+        const { name, email, message } = req.body;
+
+        const user = await FeedbackModel.create({
+            name,
+            email,
+            message,
+        });
+
+        res.status(201).json(user);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal Server Error" });
