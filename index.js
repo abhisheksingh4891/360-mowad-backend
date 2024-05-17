@@ -1,19 +1,17 @@
 const express = require("express");
 const cors = require("cors")
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
 const StepUserModel = require("./Models/Register/StepRegister")
 const NgoUserModel = require("./Models/Register/NgoRegister")
 const AdminUserModel = require("./Models/Register/AdminRegister")
-// const StepUserData = require("./Models/StepUser");
 require("./Conn/conn")
 
 const app = express();
 app.use(express.json())
 app.use(cors());
 
-app.get('/', (req, res) => {
-    res.send("Hello")
-})
 
 app.post("/stepregister", async (req, res) => {
     try {
@@ -36,6 +34,18 @@ app.post("/stepregister", async (req, res) => {
     }
 });
 
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (token == null) return res.sendStatus(401); // No token provided
+  
+    jwt.verify(token, 'your_jwt_secret_key', (err, user) => {
+      if (err) return res.sendStatus(403); // Token is not valid
+      req.user = user;
+      next();
+    });
+  };
 
 app.post("/stepuserlogin", async (req, res) => {
     try {
@@ -44,7 +54,6 @@ app.post("/stepuserlogin", async (req, res) => {
         const user = await StepUserModel.findOne({ email });
 
         if (!user) {
-            console.log("user not found");
             return res.status(404).json({ message: "User not found" });
         }
 
@@ -54,13 +63,27 @@ app.post("/stepuserlogin", async (req, res) => {
             return res.status(401).json({ message: "Invalid credentials" });
         }
 
-        res.status(200).json({ message: "Login successful" });
+        const accessToken = jwt.sign({ _id: user._id, email: user.email }, 'your_jwt_secret_key');
+        res.json({ accessToken, message: "Login successful" });
+        
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal Server Error" });
     }
 });
 
+app.get('/profile', authenticateToken, async (req, res) => {
+    try {
+      const user = await User.findById(req.user._id);
+      if (!user) {
+        return res.status(404).send('User not found');
+      }
+      res.json(user);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      res.status(500).send('Internal Server Error');
+    }
+  });
 
 
 app.post("/ngoregister", async (req, res) => {
@@ -91,7 +114,7 @@ app.post("/ngouserlogin", async (req, res) => {
         const user = await NgoUserModel.findOne({ email });
 
         if (!user) {
-            console.log("user not found");
+            
             return res.status(404).json({ message: "User not found" });
         }
 
@@ -101,7 +124,9 @@ app.post("/ngouserlogin", async (req, res) => {
             return res.status(401).json({ message: "Invalid credentials" });
         }
 
-        res.status(200).json({ message: "Login successful" });
+        const accessToken = jwt.sign({ _id: user._id, email: user.email }, 'your_jwt_secret_key');
+        res.json({ accessToken, message: "Login successful" });
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal Server Error" });
@@ -115,7 +140,7 @@ app.post("/adminlogin", async (req, res) => {
         const user = await AdminUserModel.findOne({ email });
 
         if (!user) {
-            console.log("user not found");
+            
             return res.status(404).json({ message: "User not found" });
         }
 
@@ -125,7 +150,9 @@ app.post("/adminlogin", async (req, res) => {
             return res.status(401).json({ message: "Invalid credentials" });
         }
 
-        res.status(200).json({ message: "Login successful" });
+        const accessToken = jwt.sign({ _id: user._id, email: user.email }, 'your_jwt_secret_key');
+        res.json({ accessToken, message: "Login successful" });
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal Server Error" });
