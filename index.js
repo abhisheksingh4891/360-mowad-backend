@@ -13,31 +13,6 @@ const app = express();
 app.use(express.json())
 app.use(cors());
 
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    
-    if (token == null) return res.sendStatus(401); 
-  
-    jwt.verify(token, 'your_jwt_secret_key', (err, user) => {
-      if (err) return res.sendStatus(403); 
-      req.user = user;
-      next();
-    });
-  };
-  
-  app.get('/profile', authenticateToken, async (req, res) => {
-      try {
-        const user = await StepUserModel.findById(req.email);
-        if (!user) {
-          return res.status(404).send('User not found');
-        }
-        res.json(user);
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-        res.status(500).send('Internal Server Error');
-      }
-    });
 
 app.post("/stepregister", async (req, res) => {
     try {
@@ -64,7 +39,7 @@ app.post("/stepregister", async (req, res) => {
 app.post("/stepuserlogin", async (req, res) => {
     try {
         const { email, password } = req.body;
-
+        
         const user = await StepUserModel.findOne({ email });
 
         if (!user) {
@@ -72,7 +47,7 @@ app.post("/stepuserlogin", async (req, res) => {
         }
 
         const passwordMatch = await bcrypt.compare(password, user.password);
-
+        
         if (!passwordMatch) {
             return res.status(401).json({ message: "Invalid credentials" });
         }
@@ -93,7 +68,7 @@ app.post("/ngoregister", async (req, res) => {
         const { name, gender, phone, email, password } = req.body;
 
         const hashedPassword = await bcrypt.hash(password, 10);
-
+        
         const user = await NgoUserModel.create({
             name,
             gender,
@@ -121,11 +96,11 @@ app.post("/ngouserlogin", async (req, res) => {
         }
 
         const passwordMatch = await bcrypt.compare(password, user.password);
-
+        
         if (!passwordMatch) {
             return res.status(401).json({ message: "Invalid credentials" });
         }
-
+        
         const accessToken = jwt.sign({ _id: user._id, email: user.email }, 'your_jwt_secret_key');
         res.json({ accessToken, message: "Login successful" });
 
@@ -147,14 +122,14 @@ app.post("/adminlogin", async (req, res) => {
         }
 
         const passwordMatch = await bcrypt.compare(password, user.password);
-
+        
         if (!passwordMatch) {
             return res.status(401).json({ message: "Invalid credentials" });
         }
-
+        
         const accessToken = jwt.sign({ _id: user._id, email: user.email }, 'your_jwt_secret_key');
         res.json({ accessToken, message: "Login successful" });
-
+        
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal Server Error" });
@@ -170,7 +145,7 @@ app.post("/feedback", async (req, res) => {
             email,
             message,
         });
-
+        
         res.status(201).json(user);
     } catch (error) {
         console.error(error);
@@ -178,6 +153,31 @@ app.post("/feedback", async (req, res) => {
     }
 });
 
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (token == null) return res.sendStatus(401); 
+  
+    jwt.verify(token, 'your_jwt_secret_key', (err, user) => {
+      if (err) return res.sendStatus(403); 
+      req.user = user;
+      next();
+    });
+  };
+  
+  app.get('/profile', authenticateToken, async (req, res) => {
+      try {
+        const user = await StepUserModel.findById(req.email);
+        if (!user) {
+          return res.status(404).send('User not found');
+        }
+        res.json(user);
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        res.status(500).send('Internal Server Error');
+      }
+    });
 
 app.listen(1000, ()=>{
     console.log("Server Started");
