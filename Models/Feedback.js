@@ -11,8 +11,7 @@ const FeedbackSchema = new mongoose.Schema({
     },
     message: {
         type: String,
-        required: true,
-        unique: true
+        required: true
     }
 });
 
